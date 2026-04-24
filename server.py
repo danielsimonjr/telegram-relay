@@ -66,9 +66,7 @@ def load_delivered_ids() -> set:
 
 def save_delivered_ids(ids: set):
     recent = sorted(ids)[-1000:]
-    DELIVERED_FILE.write_text(
-        json.dumps({"ids": recent, "updated": datetime.now().isoformat()})
-    )
+    DELIVERED_FILE.write_text(json.dumps({"ids": recent, "updated": datetime.now().isoformat()}))
 
 
 def append_to_queue(message: dict):
@@ -106,9 +104,7 @@ def remove_from_queue(message_ids: set):
                 remaining.append(line)
         except json.JSONDecodeError:
             remaining.append(line)
-    QUEUE_FILE.write_text(
-        "\n".join(remaining) + ("\n" if remaining else ""), encoding="utf-8"
-    )
+    QUEUE_FILE.write_text("\n".join(remaining) + ("\n" if remaining else ""), encoding="utf-8")
 
 
 # ── Telegram API (one-shot, not polling) ─────────────────────────────────────
@@ -188,11 +184,11 @@ def fetch_recent_messages(count: int = 20) -> list[dict]:
 
 # ── FastMCP Server ───────────────────────────────────────────────────────────
 
-mcp = FastMCP("telegram-relay")
+mcp = FastMCP("telegram_relay_mcp")
 
 
 @mcp.tool()
-def check_telegram_messages(count: int = 20) -> str:
+def telegram_check_messages(count: int = 20) -> str:
     """Check Telegram for recent messages that may have been missed. Fetches the last N messages from the Telegram API and returns any that haven't been acknowledged yet. Safe to call anytime — does not interfere with the official Telegram plugin."""
     messages = fetch_recent_messages(count)
 
@@ -239,7 +235,7 @@ def check_telegram_messages(count: int = 20) -> str:
 
 
 @mcp.tool()
-def get_pending_messages(max_age_seconds: int = 3600) -> str:
+def telegram_get_pending_messages(max_age_seconds: int = 3600) -> str:
     """Get messages from the relay queue that haven't been acknowledged yet. Does not call the Telegram API — only reads the local queue file."""
     messages = read_queue(max_age=max_age_seconds)
 
@@ -260,13 +256,11 @@ def get_pending_messages(max_age_seconds: int = 3600) -> str:
             }
         )
 
-    return json.dumps(
-        {"status": "ok", "count": len(formatted), "messages": formatted}, indent=2
-    )
+    return json.dumps({"status": "ok", "count": len(formatted), "messages": formatted}, indent=2)
 
 
 @mcp.tool()
-def acknowledge_messages(message_ids: list[str]) -> str:
+def telegram_acknowledge_messages(message_ids: list[str]) -> str:
     """Mark messages as delivered/processed. Removes them from the queue."""
     id_set = set(str(i) for i in message_ids)
     delivered = load_delivered_ids()
@@ -277,7 +271,7 @@ def acknowledge_messages(message_ids: list[str]) -> str:
 
 
 @mcp.tool()
-def relay_status() -> str:
+def telegram_relay_status() -> str:
     """Check the relay server status: queue depth, delivered count, configuration."""
     queue = read_queue()
     delivered = load_delivered_ids()

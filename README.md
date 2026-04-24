@@ -13,19 +13,21 @@ between session end and the next start window can be missed.
 `telegram-relay` works around that by deliberately **not** long-polling. It uses
 one-shot `getUpdates` calls with `offset=-N` to *peek* at recent updates without
 consuming them, then stores new messages in a local JSONL queue. A `SessionStart`
-hook calls `check_telegram_messages` on startup so anything missed while offline
+hook calls `telegram_check_messages` on startup so anything missed while offline
 gets surfaced on the next session.
 
 ---
 
 ## Tools
 
+All tool names are prefixed `telegram_` to avoid collisions with other MCP servers.
+
 | Tool | Purpose | Read-only | Calls Telegram API |
 |---|---|---|---|
-| `check_telegram_messages` | Fetch recent messages one-shot, append new ones to the local queue, return everything pending. Safe to call anytime — does not interfere with the official plugin. | No (writes queue) | Yes |
-| `get_pending_messages` | Return messages already in the local queue. Does not hit Telegram. | Yes | No |
-| `acknowledge_messages` | Mark a list of message IDs as delivered and remove them from the queue. | No | No |
-| `relay_status` | Report queue depth, delivered count, token-configured flag, and allowed-user list. Useful for diagnostics. | Yes | No |
+| `telegram_check_messages` | Fetch recent messages one-shot, append new ones to the local queue, return everything pending. Safe to call anytime — does not interfere with the official plugin. | No (writes queue) | Yes |
+| `telegram_get_pending_messages` | Return messages already in the local queue. Does not hit Telegram. | Yes | No |
+| `telegram_acknowledge_messages` | Mark a list of message IDs as delivered and remove them from the queue. | No | No |
+| `telegram_relay_status` | Report queue depth, delivered count, token-configured flag, and allowed-user list. Useful for diagnostics. | Yes | No |
 
 ---
 
@@ -110,7 +112,7 @@ IDs allowed to send messages:
 ### 3. Optional environment variable
 
 - `TELEGRAM_RELAY_MAX_AGE` — max age in seconds for messages to remain in the
-  queue after `check_telegram_messages`. Default: `86400` (24 hours).
+  queue after `telegram_check_messages`. Default: `86400` (24 hours).
 
 ### State files created at runtime
 
@@ -169,7 +171,7 @@ Restart Claude Code for the registration to take effect.
 **Check for missed messages at session start:**
 
 ```
-Agent: check_telegram_messages(count=50)
+Agent: telegram_check_messages(count=50)
 Result: {
   "status": "ok",
   "count": 2,
@@ -191,14 +193,14 @@ Result: {
 **Process and acknowledge:**
 
 ```
-Agent: acknowledge_messages(message_ids=["4231", "4232"])
+Agent: telegram_acknowledge_messages(message_ids=["4231", "4232"])
 Result: {"status": "ok", "acknowledged": 2}
 ```
 
 **Diagnostic:**
 
 ```
-Agent: relay_status()
+Agent: telegram_relay_status()
 Result: {
   "status": "ok",
   "queue_depth": 0,
@@ -215,7 +217,7 @@ Result: {
 ## Pairing with a SessionStart hook
 
 The intended deployment is a Claude Code `SessionStart` hook that calls
-`check_telegram_messages` automatically, so missed messages surface the moment
+`telegram_check_messages` automatically, so missed messages surface the moment
 you open a session. A minimal Python hook script:
 
 ```python
