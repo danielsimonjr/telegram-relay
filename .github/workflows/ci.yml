@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+          cache: pip
+      - run: pip install -e . pytest
+      # Byte-compile the whole tree so a syntax error fails CI even when there are no tests.
+      - run: python -m compileall -q .
+      # -q; tolerate exit code 5 ("no tests collected") so a repo without tests still passes.
+      - run: pytest -q || [ $? -eq 5 ]
